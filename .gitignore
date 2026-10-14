@@ -1,0 +1,14 @@
+# Ignora o arquivo de banco de dados local (para cada um ter o seu banco de testes)
+database.db
+
+# Ignora o ambiente virtual do Python (pesado e desnecessário no GitHub)
+venv/
+env/
+__pycache__/
+
+# Ignora o arquivo de variáveis de ambiente com senhas reais
+.env
+
+# Ignora arquivos gerados pelo sistema operacional
+.DS_Store
+Thumbs.db
