@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
-
+from groq import BadRequestError
 from services import db_services
 
 # --------------------------------------------------------------------------
@@ -84,11 +84,22 @@ def _get_llm():
     global _llm
     if _llm is None:
         _llm = ChatGroq(
-            model=os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
+            model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
             temperature=0,
         ).with_structured_output(Interpretacao)
     return _llm
 
+def _chamar_llm(mensagens, tentativas: int = 3):
+    """Chama o LLM e repete se ele gerar JSON inválido (falha ocasional do modelo)."""
+    for i in range(tentativas):
+        try:
+            return _get_llm().invoke(mensagens)
+        except BadRequestError as e:
+            # só repete para esse erro específico; qualquer outro é relançado
+            if "tool_use_failed" not in str(e):
+                raise
+            if i == tentativas - 1:
+                return None   # esgotou as tentativas
 
 # --------------------------------------------------------------------------
 # Utilidades
