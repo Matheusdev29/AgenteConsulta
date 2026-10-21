@@ -3,3 +3,4 @@ langchain-groq
 pydantic
 python-dotenv
 tzdata
+pyTelegramBotAPI
