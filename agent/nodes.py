@@ -40,7 +40,8 @@ class AgentState(TypedDict, total=False):
     nome: Optional[str]
     data: Optional[str]       # YYYY-MM-DD
     hora: Optional[str]       # HH:MM
-    resposta: Optional[str]   # se preenchida, o grafo encerra o turno com ela
+    resposta: Optional[str] 
+    opcoes: Optional[list]  # se preenchida, o grafo encerra o turno com ela
 
 
 # --------------------------------------------------------------------------
@@ -78,6 +79,19 @@ Preencha apenas os campos que aparecem na mensagem; deixe null nos demais."""
 
 
 _llm = None
+
+MENU_OPCOES = [
+    {"rotulo": " Marcar consulta",   "valor": "marcar"},
+    {"rotulo": " Editar consulta",   "valor": "editar"},
+    {"rotulo": " Cancelar consulta", "valor": "cancelar"},
+]
+
+# O que cada botão "diz" ao agente quando é tocado
+TEXTO_DA_ACAO = {
+    "marcar":   "Quero marcar uma consulta",
+    "editar":   "Quero remarcar minha consulta",
+    "cancelar": "Quero cancelar minha consulta",
+}
 
 
 def _get_llm():
@@ -148,16 +162,15 @@ def interpretar(state: AgentState) -> dict:
         "nome": r.nome or state.get("nome"),
         "data": r.data or state.get("data"),
         "hora": r.hora or state.get("hora"),
-        "resposta": None,  # reseta o turno anterior
+        "resposta": None,  
+        "opcoes": None,# reseta o turno anterior
     }
 
 
 def responder_outro(state: AgentState) -> dict:
     return {
-        "resposta": (
-            "Olá! Posso te ajudar a *marcar*, *editar* ou *cancelar* uma consulta. "
-            "O que você gostaria de fazer?"
-        )
+        "resposta": "Olá! Como posso te ajudar? Escolha uma opção abaixo ou me escreva o que precisa.",
+        "opcoes": MENU_OPCOES,
     }
 
 
