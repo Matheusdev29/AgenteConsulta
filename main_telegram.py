@@ -8,10 +8,11 @@ from dotenv import load_dotenv
 
 load_dotenv()  # precisa vir antes dos imports que leem variáveis de ambiente
 
-from agent.graph import criar_agente, responder          # noqa: E402
+from agent.graph import criar_agente, responder_completo
+from agent.nodes import TEXTO_DA_ACAO         # noqa: E402
 from services.db_services import init_db                 # noqa: E402
-from services.telegram import enviar_mensagem, get_bot, mostrar_digitando  # noqa: E402
-
+from services.telegram import (enviar_mensagem, get_bot, mostrar_digitando, remover_botoes, confirmar_clique,  # noqa: E402
+)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -32,24 +33,40 @@ MSG_NAO_TEXTO = "Por enquanto só consigo ler mensagens de texto. Pode escrever 
 # --------------------------------------------------------------------------
 # Handlers (o Telegram chama a função certa conforme o tipo da mensagem)
 # --------------------------------------------------------------------------
+
+def processar(chat_id: int, texto: str) -> None:
+    """Caminho único: tanto texto digitado quanto clique de botão passam por aqui."""
+    mostrar_digitando(chat_id)
+    try:
+        # str(chat_id): o agente e o banco tratam o "telefone" como texto.
+        r = responder_completo(agente, str(chat_id), texto)
+        enviar_mensagem(chat_id, r["texto"], r["opcoes"])
+    except Exception:
+        log.exception("Erro ao processar a mensagem do chat %s", chat_id)
+        enviar_mensagem(chat_id, MSG_ERRO)
+ 
+ 
+# --------------------------------------------------------------------------
+# Handlers
+# --------------------------------------------------------------------------
 @bot.message_handler(content_types=["text"])
 def tratar_texto(message):
-    chat_id = message.chat.id
     texto = (message.text or "").strip()
     if not texto:
         return
-
-    log.info("Mensagem de %s: %s", chat_id, texto)
-    mostrar_digitando(chat_id)
-
-    try:
-        # str(chat_id): o agente e o banco tratam o "telefone" como texto.
-        resposta = responder(agente, str(chat_id), texto)
-    except Exception:
-        log.exception("Erro ao processar a mensagem do chat %s", chat_id)
-        resposta = MSG_ERRO
-
-    enviar_mensagem(chat_id, resposta)
+    log.info("Mensagem de %s: %s", message.chat.id, texto)
+    processar(message.chat.id, texto)
+ 
+ 
+@bot.callback_query_handler(func=lambda call: call.data in TEXTO_DA_ACAO)
+def tratar_botao(call):
+    chat_id = call.message.chat.id
+    log.info("Botão '%s' tocado por %s", call.data, chat_id)
+ 
+    confirmar_clique(call.id)                            # para o relógio do botão
+    remover_botoes(chat_id, call.message.message_id)     # evita cliques em menu antigo
+    processar(chat_id, TEXTO_DA_ACAO[call.data])         # o clique vira uma frase para o agente
+ 
 
 
 @bot.message_handler(
