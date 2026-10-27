@@ -67,10 +67,15 @@ def criar_agente(checkpointer=None):
     return g.compile(checkpointer=checkpointer or MemorySaver())
 
 
-def responder(agente, telefone: str, mensagem: str) -> str:
-    """Ponto de entrada para o main.py / webhook: uma mensagem entra, uma resposta sai."""
+def responder_completo(agente, telefone: str, mensagem: str) -> dict:
+    """Devolve o texto e as opções (botões) do turno."""
     resultado = agente.invoke(
         {"telefone": telefone, "mensagem": mensagem},
         config={"configurable": {"thread_id": telefone}},
     )
-    return resultado["resposta"]
+    return {"texto": resultado["resposta"], "opcoes": resultado.get("opcoes")}
+
+
+def responder(agente, telefone: str, mensagem: str) -> str:
+    """Versão só texto. Mantém o test_agente.py funcionando sem alterações."""
+    return responder_completo(agente, telefone, mensagem)["texto"]
